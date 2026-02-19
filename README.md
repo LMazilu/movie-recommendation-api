@@ -1,47 +1,97 @@
-# movie-recommendation
+# movie-recommendation-api
 
-App created for a technical challenge and to challenge myself with new technologies.
-The app is made with:
+AI-powered NestJS backend that generates personalized movie/series/cartoon suggestions from user preferences, then enriches results with poster data and stores recommendation history per user.
 
-- React (create-react-app) frontend
-- NestJs backend
-- MongoDB database
+## What the backend actually does
+This API is not only CRUD/auth: it includes a recommendation pipeline driven by AI.
 
-Everything is dockerized into three images.
-There is no source code for the mongo, it's using nest mongoose + docker image to access the database.
+Core flow:
+1. The user sends preferences (mood, genres, content type, favorite movie, target years).
+2. The backend builds a structured prompt and calls OpenAI Chat Completions (`gpt-4o`).
+3. The AI response is parsed into normalized film objects.
+4. Each title is enriched via OMDB (poster URL and metadata lookup).
+5. Recommendations are saved to the user profile in MongoDB (history capped to latest 20).
+6. The frontend receives the generated list + mood result.
 
-## How to build + run the app locally
+## Main capabilities
+- JWT authentication (email/password)
+- Google login support (Firebase token -> app JWT)
+- Forgot/change password endpoints
+- Role-based guards (`admin` vs standard user)
+- AI topic-based quick recommendations
+- AI final personalized recommendations
+- User recommendation history retrieval
+- Swagger docs and request validation
 
-1. Download both "movie-recommendation-fe" and "movie-recommendation" (this project) from my github repositories.
-2. Make a .env file for both of the projects. You can find a `.env.example` file inside the root directory of both projects. Use your personal data For the frontend, make a firebase-secret.json file too in `src/auth/secret`
-3. run `npm install` for both projects
-4. run the `npm run docker` script from the backend root directory. There is a docker compose file that will do everything for you.
-5. Done! you can now use the frontend at `localhost:3000` and the backend at `localhost:3030`. The Swagger Apis are available at `localhost:3030/api/docs`.
+## Tech stack
+- NestJS + TypeScript
+- MongoDB + Mongoose
+- OpenAI API (recommendation generation)
+- OMDB API (movie poster/data enrichment)
+- Passport JWT + custom guards/decorators
+- Helmet + validation pipe + CORS
+- Docker / Docker Compose
 
-## How to build the app
+## Main API areas
+- `POST /auth/register`
+- `POST /auth/login`
+- `POST /auth/google-login`
+- `POST /auth/forgot-password`
+- `POST /auth/change-password`
+- `POST /api/recommendations` (protected, personalized AI recommendation)
+- `POST /api/recommendations/:topic` (topic-based AI recommendation)
+- `GET /api/recommendations/:email` (protected, own/admin history)
+- `GET /users` / `GET /users/:email` / `PUT /users/:email` (admin-protected)
 
-In the project directory, you can run:
+Swagger:
+- `GET /api/docs`
 
-### `npm run docker`
+## Startup defaults
+On startup, the app auto-creates demo accounts if missing:
+- `admin@example.com` / `admin`
+- `user@example.com` / `user`
 
-Calls npm run docker:down and then npm run docker:up.
-The docker:down script is explained below.
-Then, creates images with the Dockerfiles of the backend and frontend projects (must be in the same root folder), and starts 3 new containers for the projects, 1 for the frontend, 1 for the backend, and a final one for the mongoDB database.
+## Environment variables
+Copy `.env.example` to `.env` and configure at least:
+- `PORT` (optional, default `3030`)
+- `MONGO_URI`
+- `JWT_SECRET`
+- `OPENAI_API_KEY`
+- `OMDB_API_KEY`
+- `BCRYPT_SALT_ROUNDS`
+- `FORGOT_PASSWORD_BASE` (for reset flow)
 
-### `npm run docker:down`
+## Run locally
+```bash
+npm install
+npm run start:dev
+```
 
-Deletes current docker images, docker containers and dangling images.
-Will leave volumes and volume data intact.
+Backend:
+- `http://localhost:3030`
+- Swagger: `http://localhost:3030/api/docs`
 
-### `npm run start`
+## Run full stack with Docker
+From this backend root:
 
-Runs the app in the development mode.\
-Open [http://localhost:3030](http://localhost:3030) to view it in the browser.
+```bash
+npm run docker
+```
 
-The page will reload if you make edits.\
-You will also see any lint errors in the console.
+This compose setup starts:
+- backend on `3030`
+- frontend (`movie-recommendation-web`) on `3000`
+- mongo on `27017`
 
-### `npm run build`
+Stop:
+```bash
+npm run docker:down
+```
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+## Testing
+```bash
+npm test
+npm run test:e2e
+npm run test:cov
+```
+
